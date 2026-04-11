@@ -1,0 +1,8 @@
+# ==============================================================
+# Serverless Reporting Service — Python Dependencies
+# ==============================================================
+# Compatible con Python 3.12+ y AWS Lambda
+
+psycopg2-binary==2.9.9
+PyJWT==2.9.0
+python-dotenv==1.0.1

@@ -1,0 +1,11 @@
+{
+  "httpMethod": "GET",
+  "path": "/reports",
+  "headers": {
+    "Authorization": "Bearer <TOKEN_JWT_ADMIN>"
+  },
+  "queryStringParameters": {
+    "limit": "10",
+    "offset": "0"
+  }
+}
