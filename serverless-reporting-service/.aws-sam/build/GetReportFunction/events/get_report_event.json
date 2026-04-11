@@ -1,0 +1,10 @@
+{
+  "httpMethod": "GET",
+  "path": "/reports/{id}",
+  "headers": {
+    "Authorization": "Bearer <TOKEN_JWT_ADMIN>"
+  },
+  "pathParameters": {
+    "id": "00000000-0000-0000-0000-000000000000"
+  }
+}
