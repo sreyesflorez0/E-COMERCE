@@ -79,6 +79,25 @@ services:
     networks:
       - ecommerce-net
 
+  cart-db:
+    image: postgres:16-alpine
+    container_name: cart-db
+    environment:
+      POSTGRES_DB: cart_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5437:5432"
+    volumes:
+      - cart-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cart_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ecommerce-net
+
   # ======================== SERVICES ========================
 
   auth-service:
@@ -143,6 +162,27 @@ services:
     networks:
       - ecommerce-net
 
+  cart-service:
+    build: ./cart-service
+    container_name: cart-service
+    ports:
+      - "8085:8085"
+    environment:
+      PORT: 8085
+      DATABASE_URL: postgres://postgres:postgres@cart-db:5432/cart_db
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ALGORITHM: HS512
+      PRODUCT_SERVICE_URL: http://product-service:8083
+      ENABLE_RABBITMQ: "false"
+      RABBITMQ_URL: amqp://guest:guest@localhost:5672
+      RABBITMQ_EXCHANGE: ecommerce.events
+      RABBITMQ_ROUTING_KEY: cart_updated
+    depends_on:
+      cart-db:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+
   api-gateway:
     build: ./api-gateway
     container_name: api-gateway
@@ -171,6 +211,7 @@ volumes:
   user-data:
   product-data:
   order-data:
+  cart-data:
 
 networks:
   ecommerce-net:
