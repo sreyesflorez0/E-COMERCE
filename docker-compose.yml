@@ -143,6 +143,29 @@ services:
     networks:
       - ecommerce-net
 
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=production
+      - JWT_SECRET=${JWT_SECRET}
+      - AUTH_SERVICE_URL=http://auth-service:8081
+      - USER_SERVICE_URL=http://user-service:8082
+      - PRODUCT_SERVICE_URL=http://product-service:8083
+      - ORDER_SERVICE_URL=http://order-service:8084
+      # Reporting service requires local AWS SAM or its own docker container. 
+      # By default, using docker's internal host mapping or a specific IP for local.
+      - REPORTING_SERVICE_URL=http://host.docker.internal:3000
+    depends_on:
+      - auth-service
+      - user-service
+      - product-service
+      - order-service
+    networks:
+      - ecommerce-net
+
 volumes:
   auth-data:
   user-data:
