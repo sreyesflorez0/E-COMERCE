@@ -52,6 +52,7 @@ router.use('/categories', createProxyMiddleware(createProxyOptions(env.services.
 router.use('/orders', createProxyMiddleware(createProxyOptions(env.services.order)));
 router.use('/cart', createProxyMiddleware(createProxyOptions(env.services.cart || 'http://cart-service:8085')));
 router.use('/payments', createProxyMiddleware(createProxyOptions(env.services.payment)));
+router.use('/notifications', createProxyMiddleware(createProxyOptions(env.services.notification)));
 
 if (env.services.reporting) {
   router.use('/reports', createProxyMiddleware(createProxyOptions(env.services.reporting)));

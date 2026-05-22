@@ -11,6 +11,6 @@ const futureRouteHandler = (serviceName) => (req, res) => {
   });
 };
 
-router.use('/notifications', futureRouteHandler('notifications'));
+// router.use('/notifications', futureRouteHandler('notifications')); // Moved to proxy.routes.js
 
 module.exports = router;

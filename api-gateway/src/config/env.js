@@ -13,7 +13,7 @@ const env = {
     reporting: process.env.REPORTING_SERVICE_URL || 'http://host.docker.internal:3000',
     cart: process.env.CART_SERVICE_URL || null,
     payment: process.env.PAYMENT_SERVICE_URL || 'http://payment-service:8086',
-    notification: process.env.NOTIFICATION_SERVICE_URL || null,
+    notification: process.env.NOTIFICATION_SERVICE_URL || 'http://notification-service:8087',
   },
   proxyTimeout: parseInt(process.env.PROXY_TIMEOUT_MS, 10) || 30000,
   rabbitmq: {
