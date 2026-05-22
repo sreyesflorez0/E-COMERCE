@@ -117,6 +117,16 @@ services:
     networks:
       - ecommerce-net
 
+  notification-db:
+    image: mongo:7
+    container_name: notification-db
+    ports:
+      - "27017:27017"
+    volumes:
+      - notification-data:/data/db
+    networks:
+      - ecommerce-net
+
   # ======================== SERVICES ========================
 
   auth-service:
@@ -218,12 +228,14 @@ services:
       # Reporting service requires local AWS SAM or its own docker container. 
       # By default, using docker's internal host mapping or a specific IP for local.
       - REPORTING_SERVICE_URL=http://host.docker.internal:3000
+      - NOTIFICATION_SERVICE_URL=http://notification-service:8087
     depends_on:
       - auth-service
       - user-service
       - product-service
       - order-service
       - payment-service
+      - notification-service
     networks:
       - ecommerce-net
 
@@ -250,6 +262,27 @@ services:
     networks:
       - ecommerce-net
 
+  notification-service:
+    build: ./notification-service
+    container_name: notification-service
+    ports:
+      - "8087:8087"
+    environment:
+      PORT: 8087
+      MONGO_URI: mongodb://notification-db:27017
+      MONGO_DB: notification_db
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ALGORITHM: HS512
+      ENABLE_RABBITMQ: "false"
+      RABBITMQ_URL: amqp://guest:guest@localhost:5672
+      RABBITMQ_EXCHANGE: ecommerce.events
+      RABBITMQ_QUEUE: notification_service_queue
+      RABBITMQ_ROUTING_KEYS: cart_updated,order_created,order_confirmed,payment_completed,payment_failed
+      ENABLE_NOTIFICATION_SENT_EVENT: "false"
+      RABBITMQ_NOTIFICATION_SENT_ROUTING_KEY: notification_sent
+    networks:
+      - ecommerce-net
+
 volumes:
   auth-data:
   user-data:
@@ -257,6 +290,7 @@ volumes:
   order-data:
   cart-data:
   payment-data:
+  notification-data:
 
 networks:
   ecommerce-net:
