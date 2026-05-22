@@ -229,6 +229,7 @@ services:
       # By default, using docker's internal host mapping or a specific IP for local.
       - REPORTING_SERVICE_URL=http://host.docker.internal:3000
       - NOTIFICATION_SERVICE_URL=http://notification-service:8087
+      - AI_RECOMMENDATION_SERVICE_URL=http://ai-recommendation-service:8088
     depends_on:
       - auth-service
       - user-service
@@ -236,6 +237,7 @@ services:
       - order-service
       - payment-service
       - notification-service
+      - ai-recommendation-service
     networks:
       - ecommerce-net
 
@@ -280,6 +282,25 @@ services:
       RABBITMQ_ROUTING_KEYS: cart_updated,order_created,order_confirmed,payment_completed,payment_failed
       ENABLE_NOTIFICATION_SENT_EVENT: "false"
       RABBITMQ_NOTIFICATION_SENT_ROUTING_KEY: notification_sent
+    networks:
+      - ecommerce-net
+
+  ai-recommendation-service:
+    build: ./ai-recommendation-service
+    container_name: ai-recommendation-service
+    ports:
+      - "8088:8088"
+    environment:
+      PORT: 8088
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.0-flash}
+      PRODUCT_SERVICE_URL: http://product-service:8083
+      CART_SERVICE_URL: http://cart-service:8085
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ALGORITHM: HS512
+    depends_on:
+      - product-service
+      - cart-service
     networks:
       - ecommerce-net
 

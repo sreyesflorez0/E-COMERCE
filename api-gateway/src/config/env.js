@@ -14,6 +14,7 @@ const env = {
     cart: process.env.CART_SERVICE_URL || null,
     payment: process.env.PAYMENT_SERVICE_URL || 'http://payment-service:8086',
     notification: process.env.NOTIFICATION_SERVICE_URL || 'http://notification-service:8087',
+    recommendation: process.env.AI_RECOMMENDATION_SERVICE_URL || 'http://ai-recommendation-service:8088',
   },
   proxyTimeout: parseInt(process.env.PROXY_TIMEOUT_MS, 10) || 30000,
   rabbitmq: {
