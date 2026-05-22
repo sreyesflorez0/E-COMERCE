@@ -98,6 +98,25 @@ services:
     networks:
       - ecommerce-net
 
+  payment-db:
+    image: postgres:16-alpine
+    container_name: payment-db
+    environment:
+      POSTGRES_DB: payment_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5438:5432"
+    volumes:
+      - payment-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d payment_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ecommerce-net
+
   # ======================== SERVICES ========================
 
   auth-service:
@@ -195,6 +214,7 @@ services:
       - USER_SERVICE_URL=http://user-service:8082
       - PRODUCT_SERVICE_URL=http://product-service:8083
       - ORDER_SERVICE_URL=http://order-service:8084
+      - PAYMENT_SERVICE_URL=http://payment-service:8086
       # Reporting service requires local AWS SAM or its own docker container. 
       # By default, using docker's internal host mapping or a specific IP for local.
       - REPORTING_SERVICE_URL=http://host.docker.internal:3000
@@ -203,6 +223,30 @@ services:
       - user-service
       - product-service
       - order-service
+      - payment-service
+    networks:
+      - ecommerce-net
+
+  payment-service:
+    build: ./payment-service
+    container_name: payment-service
+    ports:
+      - "8086:8086"
+    environment:
+      PORT: 8086
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@payment-db:5432/payment_db
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ALGORITHM: HS512
+      ORDER_SERVICE_URL: http://order-service:8084
+      PAYMENT_ALLOW_UNVERIFIED_ORDERS: "true"
+      ENABLE_RABBITMQ: "false"
+      RABBITMQ_URL: amqp://guest:guest@localhost:5672
+      RABBITMQ_EXCHANGE: ecommerce.events
+      RABBITMQ_PAYMENT_COMPLETED_ROUTING_KEY: payment_completed
+      RABBITMQ_PAYMENT_FAILED_ROUTING_KEY: payment_failed
+    depends_on:
+      payment-db:
+        condition: service_healthy
     networks:
       - ecommerce-net
 
@@ -212,6 +256,7 @@ volumes:
   product-data:
   order-data:
   cart-data:
+  payment-data:
 
 networks:
   ecommerce-net:

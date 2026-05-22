@@ -12,7 +12,7 @@ const env = {
     order: process.env.ORDER_SERVICE_URL || 'http://order-service:8084',
     reporting: process.env.REPORTING_SERVICE_URL || 'http://host.docker.internal:3000',
     cart: process.env.CART_SERVICE_URL || null,
-    payment: process.env.PAYMENT_SERVICE_URL || null,
+    payment: process.env.PAYMENT_SERVICE_URL || 'http://payment-service:8086',
     notification: process.env.NOTIFICATION_SERVICE_URL || null,
   },
   proxyTimeout: parseInt(process.env.PROXY_TIMEOUT_MS, 10) || 30000,

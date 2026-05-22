@@ -11,7 +11,6 @@ const futureRouteHandler = (serviceName) => (req, res) => {
   });
 };
 
-router.use('/payments', futureRouteHandler('payments'));
 router.use('/notifications', futureRouteHandler('notifications'));
 
 module.exports = router;
