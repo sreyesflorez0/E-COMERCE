@@ -8,7 +8,8 @@ const publicRoutes = [
   { path: '/health', methods: ['GET'] },
   // Product service public endpoints
   { path: '/api/products', methods: ['GET'] },
-  { path: '/api/categories', methods: ['GET'] }
+  { path: '/api/categories', methods: ['GET'] },
+  { path: '/api/recommendations/trending', methods: ['GET'] }
 ];
 
 const isPublicRoute = (req) => {
@@ -20,7 +21,7 @@ const isPublicRoute = (req) => {
   return publicRoutes.some(route => {
     // Exact match for endpoints like /api/auth/login
     // Or prefix match for /api/products and /api/categories to allow sub-paths like /api/products/123
-    const isPrefixRoute = route.path === '/api/products' || route.path === '/api/categories';
+    const isPrefixRoute = route.path === '/api/products' || route.path === '/api/categories' || route.path === '/api/recommendations/trending';
     const isPathMatch = requestPath === route.path || (isPrefixRoute && requestPath.startsWith(`${route.path}/`));
     const isMethodMatch = route.methods.includes(req.method);
     return isPathMatch && isMethodMatch;
