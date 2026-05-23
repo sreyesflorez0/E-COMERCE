@@ -2,7 +2,7 @@
 
 import { useAuthStore } from '@/store/authStore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { User, Mail, ShieldAlert, Bell } from 'lucide-react';
+import { User, Mail, ShieldAlert, Bell, Shield, Store } from 'lucide-react';
 import Link from 'next/link';
 
 export default function DashboardPage() {
@@ -66,6 +66,32 @@ export default function DashboardPage() {
       <div className="mt-12">
         <h2 className="text-2xl font-bold mb-6">Accesos Rápidos</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {user?.role === 'ADMIN' && (
+            <Link href="/admin" className="block group">
+              <Card className="hover:border-primary transition-colors h-full border-primary/50 bg-primary/5">
+                <CardHeader>
+                  <CardTitle className="text-lg group-hover:text-primary transition-colors flex items-center gap-2">
+                    <Shield className="h-5 w-5" />
+                    Panel Administrador
+                  </CardTitle>
+                  <CardDescription>Gestión centralizada</CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+          )}
+          {user?.role === 'VENDOR' && (
+            <Link href="/vendor" className="block group">
+              <Card className="hover:border-primary transition-colors h-full border-primary/50 bg-primary/5">
+                <CardHeader>
+                  <CardTitle className="text-lg group-hover:text-primary transition-colors flex items-center gap-2">
+                    <Store className="h-5 w-5" />
+                    Panel Vendedor
+                  </CardTitle>
+                  <CardDescription>Gestión de tienda</CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+          )}
           <Link href="/products" className="block group">
             <Card className="hover:border-primary transition-colors h-full">
               <CardHeader>

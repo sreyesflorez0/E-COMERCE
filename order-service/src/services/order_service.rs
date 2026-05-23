@@ -197,6 +197,32 @@ impl OrderService {
         Ok(responses)
     }
 
+    pub async fn get_all_orders(
+        pool: &PgPool,
+    ) -> Result<Vec<OrderResponse>, AppError> {
+        let orders = sqlx::query_as::<_, Order>(
+            "SELECT * FROM orders ORDER BY created_at DESC"
+        )
+        .fetch_all(pool)
+        .await?;
+
+        let mut responses = Vec::new();
+        for order in orders {
+            let items = Self::get_order_items(pool, order.id).await?;
+            responses.push(OrderResponse {
+                id: order.id,
+                user_id: order.user_id,
+                status: order.status,
+                total: order.total,
+                shipping_address: order.shipping_address,
+                created_at: order.created_at,
+                items,
+            });
+        }
+
+        Ok(responses)
+    }
+
     pub async fn update_order_status(
         pool: &PgPool,
         order_id: Uuid,

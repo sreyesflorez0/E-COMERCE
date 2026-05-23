@@ -3,13 +3,13 @@
 import Link from 'next/link';
 import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
-import { LogOut, LayoutDashboard, LogIn, UserPlus, ShoppingBag, ShoppingCart, Package, CreditCard, Bell } from 'lucide-react';
+import { LogOut, LayoutDashboard, LogIn, UserPlus, ShoppingBag, ShoppingCart, Package, CreditCard, Bell, Shield, Store } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/hooks/useCart';
 import { useNotifications } from '@/hooks/useNotifications';
 
 export function Navbar() {
-  const { isAuthenticated, logout } = useAuthStore();
+  const { isAuthenticated, logout, user } = useAuthStore();
   const router = useRouter();
   const { cart } = useCart();
   const { unreadCount, isUnreadCountLoading, isError } = useNotifications();
@@ -77,6 +77,22 @@ export function Navbar() {
                   )}
                 </Button>
               </Link>
+              {user?.role === 'ADMIN' && (
+                <Link href="/admin">
+                  <Button variant="ghost" className="gap-2">
+                    <Shield className="h-4 w-4" />
+                    <span className="hidden sm:inline">Admin</span>
+                  </Button>
+                </Link>
+              )}
+              {user?.role === 'VENDOR' && (
+                <Link href="/vendor">
+                  <Button variant="ghost" className="gap-2">
+                    <Store className="h-4 w-4" />
+                    <span className="hidden sm:inline">Vendedor</span>
+                  </Button>
+                </Link>
+              )}
               <Button variant="outline" onClick={handleLogout} className="gap-2">
                 <LogOut className="h-4 w-4" />
                 <span className="hidden sm:inline">Logout</span>
