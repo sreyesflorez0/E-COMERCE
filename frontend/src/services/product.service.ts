@@ -17,4 +17,26 @@ export const productService = {
     const response = await api.get<ProductRaw>(`/products/${id}`);
     return normalizeProduct(response.data);
   },
+
+  async createProduct(data: { name: string; description: string; price: number; stock: number; categoryId: string }): Promise<Product> {
+    const payload = {
+      ...data,
+      category_id: data.categoryId // Ensure we send category_id as some backends expect
+    };
+    const response = await api.post<ProductRaw>('/products', payload);
+    return normalizeProduct(response.data);
+  },
+
+  async updateProduct(id: string, data: { name: string; description: string; price: number; stock: number; categoryId: string }): Promise<Product> {
+    const payload = {
+      ...data,
+      category_id: data.categoryId // Ensure we send category_id as some backends expect
+    };
+    const response = await api.put<ProductRaw>(`/products/${id}`, payload);
+    return normalizeProduct(response.data);
+  },
+
+  async deleteProduct(id: string): Promise<void> {
+    await api.delete(`/products/${id}`);
+  }
 };

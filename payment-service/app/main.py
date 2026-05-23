@@ -58,6 +58,16 @@ async def get_my_payments(
     return await repository.get_payments_by_user(db, user.id)
 
 
+@app.get("/payments/admin/payments", response_model=List[schemas.PaymentResponse])
+async def get_all_payments_admin(
+    user: UserData = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    if user.role != "ADMIN":
+        raise ForbiddenError("Not authorized to list all payments")
+    return await repository.get_all_payments(db)
+
+
 @app.get("/payments/order/{order_id}", response_model=schemas.PaymentResponse)
 async def get_payment_by_order(
     order_id: UUID,

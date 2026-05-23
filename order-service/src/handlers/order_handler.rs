@@ -43,6 +43,20 @@ pub async fn get_my_orders(
     Ok(HttpResponse::Ok().json(orders))
 }
 
+pub async fn get_all_orders(
+    pool: web::Data<PgPool>,
+    user: AuthenticatedUser,
+) -> Result<HttpResponse, AppError> {
+    if user.role != "ADMIN" {
+        return Err(AppError::Forbidden(
+            "Solo los administradores pueden listar todas las órdenes".to_string(),
+        ));
+    }
+
+    let orders = OrderService::get_all_orders(pool.get_ref()).await?;
+    Ok(HttpResponse::Ok().json(orders))
+}
+
 pub async fn update_order_status(
     pool: web::Data<PgPool>,
     user: AuthenticatedUser,

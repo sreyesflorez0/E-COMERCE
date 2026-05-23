@@ -27,6 +27,10 @@ async def get_payments_by_user(db: AsyncSession, user_id: UUID) -> list[Payment]
     result = await db.execute(select(Payment).where(Payment.user_id == user_id))
     return result.scalars().all()
 
+async def get_all_payments(db: AsyncSession) -> list[Payment]:
+    result = await db.execute(select(Payment))
+    return result.scalars().all()
+
 async def update_payment_status(db: AsyncSession, payment: Payment, new_status: str) -> Payment:
     payment.status = new_status
     if new_status == "COMPLETED":
