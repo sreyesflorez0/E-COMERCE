@@ -38,7 +38,7 @@ export function ProductManager({ role, backUrl }: ProductManagerProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const form = useForm<ProductFormValues>({
+  const form = useForm<z.input<typeof productSchema>, any, z.infer<typeof productSchema>>({
     resolver: zodResolver(productSchema),
     defaultValues: { name: '', description: '', price: 0, stock: 0, categoryId: '' },
   });

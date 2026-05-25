@@ -1,7 +1,6 @@
 'use client';
 
-import { useForm } from 'react-query'; // No, wait, I'll use react-hook-form
-import { useForm as useHookForm } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -26,7 +25,7 @@ interface Props {
 }
 
 export function GenerateReportForm({ onGenerate, isGenerating }: Props) {
-  const { register, handleSubmit, formState: { errors } } = useHookForm<z.infer<typeof schema>>({
+  const { register, handleSubmit, formState: { errors } } = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
     defaultValues: {
       report_type: 'on_demand',
