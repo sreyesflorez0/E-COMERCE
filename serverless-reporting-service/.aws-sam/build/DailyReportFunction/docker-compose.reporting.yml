@@ -1,0 +1,36 @@
+# ==============================================================
+# Docker Compose — Serverless Reporting Service (independiente)
+# ==============================================================
+# Este archivo es INDEPENDIENTE del docker-compose.yml principal.
+# Solo levanta la base de datos del Reporting Service.
+#
+# Uso:
+#   docker-compose -f docker-compose.reporting.yml up -d
+#
+# NOTA: Los 4 microservicios existentes NO se modifican.
+#       Este archivo se ejecuta por separado.
+# ==============================================================
+
+version: '3.9'
+
+services:
+  reporting-db:
+    image: postgres:16-alpine
+    container_name: reporting-db
+    environment:
+      POSTGRES_DB: reporting_db
+      POSTGRES_USER: reporting_user
+      POSTGRES_PASSWORD: reporting_pass
+    ports:
+      - "5439:5432"
+    volumes:
+      - reporting-data:/var/lib/postgresql/data
+      - ./sql/001_create_tables.sql:/docker-entrypoint-initdb.d/001_create_tables.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U reporting_user -d reporting_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  reporting-data:

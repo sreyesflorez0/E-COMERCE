@@ -1,0 +1,172 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: "Serverless Reporting Service para la plataforma e-commerce. Genera reportes\
+  \ de ventas y m\xE9tricas bajo demanda o programados.\n"
+Globals:
+  Function:
+    Runtime: python3.11
+    Timeout: 30
+    MemorySize: 256
+    Environment:
+      Variables:
+        REPORTING_DB_HOST:
+          Ref: ReportingDbHost
+        REPORTING_DB_PORT:
+          Ref: ReportingDbPort
+        REPORTING_DB_NAME:
+          Ref: ReportingDbName
+        REPORTING_DB_USER:
+          Ref: ReportingDbUser
+        REPORTING_DB_PASSWORD:
+          Ref: ReportingDbPassword
+        ORDER_DB_HOST:
+          Ref: OrderDbHost
+        ORDER_DB_PORT:
+          Ref: OrderDbPort
+        ORDER_DB_NAME:
+          Ref: OrderDbName
+        ORDER_DB_USER:
+          Ref: OrderDbUser
+        ORDER_DB_PASSWORD:
+          Ref: OrderDbPassword
+        JWT_SECRET:
+          Ref: JwtSecret
+        JWT_ALGORITHM:
+          Ref: JwtAlgorithm
+Parameters:
+  ReportingDbHost:
+    Type: String
+    Default: host.docker.internal
+  ReportingDbPort:
+    Type: String
+    Default: '5437'
+  ReportingDbName:
+    Type: String
+    Default: reporting_db
+  ReportingDbUser:
+    Type: String
+    Default: reporting_user
+  ReportingDbPassword:
+    Type: String
+    NoEcho: true
+    Default: reporting_pass
+  OrderDbHost:
+    Type: String
+    Default: host.docker.internal
+  OrderDbPort:
+    Type: String
+    Default: '5436'
+  OrderDbName:
+    Type: String
+    Default: order_db
+  OrderDbUser:
+    Type: String
+    Default: order_user
+  OrderDbPassword:
+    Type: String
+    NoEcho: true
+    Default: order_pass
+  JwtSecret:
+    Type: String
+    NoEcho: true
+    Default: ecommerce-super-secret-jwt-key-change-this-in-production-must-be-256-bits
+  JwtAlgorithm:
+    Type: String
+    Default: HS512
+Resources:
+  ReportingApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: prod
+      Cors:
+        AllowMethods: '''GET,POST,OPTIONS'''
+        AllowHeaders: '''Content-Type,Authorization'''
+        AllowOrigin: '''*'''
+  GenerateReportFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src.handlers.generate_report.handler
+      CodeUri: GenerateReportFunction
+      Description: Genera un reporte de ventas bajo demanda (requiere ADMIN)
+      Events:
+        GenerateReport:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: ReportingApi
+            Path: /reports/generate
+            Method: POST
+    Metadata:
+      SamResourceId: GenerateReportFunction
+  DailyReportFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src.handlers.daily_report.handler
+      CodeUri: DailyReportFunction
+      Description: "Genera autom\xE1ticamente un reporte diario (schedule + endpoint\
+        \ manual)"
+      Events:
+        DailySchedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 6 * * ? *)
+            Description: Genera reporte diario a las 6:00 AM UTC
+            Enabled: true
+        DailyReportApi:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: ReportingApi
+            Path: /reports/daily
+            Method: POST
+    Metadata:
+      SamResourceId: DailyReportFunction
+  ListReportsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src.handlers.list_reports.handler
+      CodeUri: ListReportsFunction
+      Description: "Lista reportes generados con paginaci\xF3n"
+      Events:
+        ListReports:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: ReportingApi
+            Path: /reports
+            Method: GET
+    Metadata:
+      SamResourceId: ListReportsFunction
+  GetReportFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src.handlers.get_report.handler
+      CodeUri: GetReportFunction
+      Description: "Consulta un reporte espec\xEDfico con m\xE9tricas"
+      Events:
+        GetReport:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: ReportingApi
+            Path: /reports/{id}
+            Method: GET
+    Metadata:
+      SamResourceId: GetReportFunction
+Outputs:
+  ReportingApiUrl:
+    Description: URL del API Gateway del Reporting Service
+    Value:
+      Fn::Sub: https://${ReportingApi}.execute-api.${AWS::Region}.amazonaws.com/prod/
+  GenerateReportFunction:
+    Description: "ARN de la funci\xF3n de generaci\xF3n de reportes"
+    Value:
+      Fn::GetAtt:
+      - GenerateReportFunction
+      - Arn
+  DailyReportFunction:
+    Description: "ARN de la funci\xF3n de reporte diario"
+    Value:
+      Fn::GetAtt:
+      - DailyReportFunction
+      - Arn

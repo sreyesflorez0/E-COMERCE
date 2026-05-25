@@ -1,0 +1,319 @@
+version: '3.9'
+
+services:
+  # ======================== DATABASES ========================
+
+  auth-db:
+    image: postgres:16-alpine
+    container_name: auth-db
+    environment:
+      POSTGRES_DB: ${AUTH_DB_NAME}
+      POSTGRES_USER: ${AUTH_DB_USER}
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD}
+    ports:
+      - "5433:5432"
+    volumes:
+      - auth-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AUTH_DB_USER} -d ${AUTH_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ecommerce-net
+
+  user-db:
+    image: postgres:16-alpine
+    container_name: user-db
+    environment:
+      POSTGRES_DB: ${USER_DB_NAME}
+      POSTGRES_USER: ${USER_DB_USER}
+      POSTGRES_PASSWORD: ${USER_DB_PASSWORD}
+    ports:
+      - "5434:5432"
+    volumes:
+      - user-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${USER_DB_USER} -d ${USER_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ecommerce-net
+
+  product-db:
+    image: postgres:16-alpine
+    container_name: product-db
+    environment:
+      POSTGRES_DB: ${PRODUCT_DB_NAME}
+      POSTGRES_USER: ${PRODUCT_DB_USER}
+      POSTGRES_PASSWORD: ${PRODUCT_DB_PASSWORD}
+    ports:
+      - "5435:5432"
+    volumes:
+      - product-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PRODUCT_DB_USER} -d ${PRODUCT_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ecommerce-net
+
+  order-db:
+    image: postgres:16-alpine
+    container_name: order-db
+    environment:
+      POSTGRES_DB: ${ORDER_DB_NAME}
+      POSTGRES_USER: ${ORDER_DB_USER}
+      POSTGRES_PASSWORD: ${ORDER_DB_PASSWORD}
+    ports:
+      - "5436:5432"
+    volumes:
+      - order-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${ORDER_DB_USER} -d ${ORDER_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ecommerce-net
+
+  cart-db:
+    image: postgres:16-alpine
+    container_name: cart-db
+    environment:
+      POSTGRES_DB: cart_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5437:5432"
+    volumes:
+      - cart-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cart_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ecommerce-net
+
+  payment-db:
+    image: postgres:16-alpine
+    container_name: payment-db
+    environment:
+      POSTGRES_DB: payment_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5438:5432"
+    volumes:
+      - payment-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d payment_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ecommerce-net
+
+  notification-db:
+    image: mongo:7
+    container_name: notification-db
+    ports:
+      - "27017:27017"
+    volumes:
+      - notification-data:/data/db
+    networks:
+      - ecommerce-net
+
+  # ======================== SERVICES ========================
+
+  auth-service:
+    build: ./auth-service
+    container_name: auth-service
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://auth-db:5432/${AUTH_DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${AUTH_DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${AUTH_DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      auth-db:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+
+  user-service:
+    build: ./user-service
+    container_name: user-service
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://user-db:5432/${USER_DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${USER_DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${USER_DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      user-db:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+
+  product-service:
+    build: ./product-service
+    container_name: product-service
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://product-db:5432/${PRODUCT_DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${PRODUCT_DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${PRODUCT_DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      product-db:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+
+  order-service:
+    build: ./order-service
+    container_name: order-service
+    ports:
+      - "8084:8084"
+    environment:
+      DATABASE_URL: postgres://${ORDER_DB_USER}:${ORDER_DB_PASSWORD}@order-db:5432/${ORDER_DB_NAME}
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      order-db:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+
+  cart-service:
+    build: ./cart-service
+    container_name: cart-service
+    ports:
+      - "8085:8085"
+    environment:
+      PORT: 8085
+      DATABASE_URL: postgres://postgres:postgres@cart-db:5432/cart_db
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ALGORITHM: HS512
+      PRODUCT_SERVICE_URL: http://product-service:8083
+      ENABLE_RABBITMQ: "false"
+      RABBITMQ_URL: amqp://guest:guest@localhost:5672
+      RABBITMQ_EXCHANGE: ecommerce.events
+      RABBITMQ_ROUTING_KEY: cart_updated
+    depends_on:
+      cart-db:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=production
+      - JWT_SECRET=${JWT_SECRET}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      - AUTH_SERVICE_URL=http://auth-service:8081
+      - USER_SERVICE_URL=http://user-service:8082
+      - PRODUCT_SERVICE_URL=http://product-service:8083
+      - ORDER_SERVICE_URL=http://order-service:8084
+      - PAYMENT_SERVICE_URL=http://payment-service:8086
+      # Reporting service requires local AWS SAM or its own docker container. 
+      # By default, using docker's internal host mapping or a specific IP for local.
+      - REPORTING_SERVICE_URL=http://host.docker.internal:3000
+      - NOTIFICATION_SERVICE_URL=http://notification-service:8087
+      - AI_RECOMMENDATION_SERVICE_URL=http://ai-recommendation-service:8088
+    depends_on:
+      - auth-service
+      - user-service
+      - product-service
+      - order-service
+      - payment-service
+      - notification-service
+      - ai-recommendation-service
+    networks:
+      - ecommerce-net
+
+  payment-service:
+    build: ./payment-service
+    container_name: payment-service
+    ports:
+      - "8086:8086"
+    environment:
+      PORT: 8086
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@payment-db:5432/payment_db
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ALGORITHM: HS512
+      ORDER_SERVICE_URL: http://order-service:8084
+      PAYMENT_ALLOW_UNVERIFIED_ORDERS: "true"
+      ENABLE_RABBITMQ: "false"
+      RABBITMQ_URL: amqp://guest:guest@localhost:5672
+      RABBITMQ_EXCHANGE: ecommerce.events
+      RABBITMQ_PAYMENT_COMPLETED_ROUTING_KEY: payment_completed
+      RABBITMQ_PAYMENT_FAILED_ROUTING_KEY: payment_failed
+    depends_on:
+      payment-db:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+
+  notification-service:
+    build: ./notification-service
+    container_name: notification-service
+    ports:
+      - "8087:8087"
+    environment:
+      PORT: 8087
+      MONGO_URI: mongodb://notification-db:27017
+      MONGO_DB: notification_db
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ALGORITHM: HS512
+      ENABLE_RABBITMQ: "false"
+      RABBITMQ_URL: amqp://guest:guest@localhost:5672
+      RABBITMQ_EXCHANGE: ecommerce.events
+      RABBITMQ_QUEUE: notification_service_queue
+      RABBITMQ_ROUTING_KEYS: cart_updated,order_created,order_confirmed,payment_completed,payment_failed
+      ENABLE_NOTIFICATION_SENT_EVENT: "false"
+      RABBITMQ_NOTIFICATION_SENT_ROUTING_KEY: notification_sent
+    networks:
+      - ecommerce-net
+
+  ai-recommendation-service:
+    build: ./ai-recommendation-service
+    container_name: ai-recommendation-service
+    ports:
+      - "8088:8088"
+    environment:
+      PORT: 8088
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.0-flash}
+      PRODUCT_SERVICE_URL: http://product-service:8083
+      CART_SERVICE_URL: http://cart-service:8085
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ALGORITHM: HS512
+    depends_on:
+      - product-service
+      - cart-service
+    networks:
+      - ecommerce-net
+
+volumes:
+  auth-data:
+  user-data:
+  product-data:
+  order-data:
+  cart-data:
+  payment-data:
+  notification-data:
+
+networks:
+  ecommerce-net:
+    driver: bridge
