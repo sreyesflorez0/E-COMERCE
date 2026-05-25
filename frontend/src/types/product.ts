@@ -1,10 +1,11 @@
 export interface ProductRaw {
   id?: string | number;
   product_id?: string | number;
+  productId?: string | number;
   name: string;
   description: string;
   price: string | number;
-  stock: number;
+  stock: string | number;
   category_id?: string | number;
   categoryId?: string | number;
   active?: boolean;
@@ -24,7 +25,7 @@ export interface Product {
 }
 
 export function normalizeProduct(raw: ProductRaw): Product {
-  const id = raw.id ?? raw.product_id ?? '';
+  const id = raw.id ?? raw.productId ?? raw.product_id ?? '';
   const price = parseFloat(String(raw.price || 0)) || 0;
   const categoryId = raw.categoryId ?? raw.category_id ?? '';
   

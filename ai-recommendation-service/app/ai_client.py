@@ -16,20 +16,59 @@ if settings.GEMINI_API_KEY:
     except Exception as e:
         logger.error(f"Failed to initialize Gemini client: {e}")
 
-def _get_fallback_recommendations(products: List[Product], max_results: int) -> List[Recommendation]:
-    logger.info("Using fallback recommendations")
-    # Simple fallback: return the first active products
+def is_locally_relevant(query: str, product: Product) -> bool:
+    if not query:
+        return True
+    
+    q_lower = query.lower()
+    generic_keywords = {"recomiéndame", "recomiendame", "recomienda", "producto", "algo", "quiero", "busco", "necesito", "un", "una", "para", "el", "la", "los", "las", "de", "del", "que"}
+    
+    query_words = [w for w in q_lower.split() if w not in generic_keywords]
+    
+    if not query_words:
+        return True
+
+    synonyms = {
+        "laptop": ["portátil", "computador", "pc", "ordenador", "portatil"],
+        "phone": ["celular", "smartphone", "telefono", "teléfono"],
+        "tv": ["televisor", "pantalla", "television", "televisión"]
+    }
+    
+    p_text = f"{product.name} {product.description or ''} {product.categoryId or ''}".lower()
+    
+    for word in query_words:
+        if word in p_text:
+            return True
+            
+        for base_word, syns in synonyms.items():
+            if word == base_word or word in syns:
+                if base_word in p_text or any(s in p_text for s in syns):
+                    return True
+
+    return False
+
+def _get_fallback_recommendations(products: List[Product], max_results: int, query: str = None) -> List[Recommendation]:
+    logger.info("[LOG_SEGURO] Usando fallback para recomendaciones")
     fallback = []
-    for p in products[:max_results]:
-        fallback.append(
-            Recommendation(
-                product_id=p.id,
-                name=p.name,
-                price=p.price,
-                stock=p.stock,
-                reason="Recomendación general."
+    for p in products:
+        if query is None or is_locally_relevant(query, p):
+            fallback.append(
+                Recommendation(
+                    product_id=p.id,
+                    name=p.name,
+                    price=p.price,
+                    stock=p.stock,
+                    reason="Recomendación general." if not query else "Sugerencia relevante."
+                )
             )
-        )
+        if len(fallback) >= max_results:
+            break
+            
+    if not fallback:
+        logger.info("[LOG_SEGURO] Fallback devolvió vacío por baja relevancia.")
+    else:
+        logger.info(f"[LOG_SEGURO] Productos localmente relevantes encontrados: {len(fallback)}")
+        
     return fallback
 
 async def generate_recommendations(query: str, max_results: int, available_products: List[Product]) -> List[Recommendation]:
@@ -37,7 +76,7 @@ async def generate_recommendations(query: str, max_results: int, available_produ
     candidates = available_products[:20]
     
     if not ai_client or not candidates:
-        return _get_fallback_recommendations(candidates, max_results)
+        return _get_fallback_recommendations(candidates, max_results, query)
 
     # 2. Build the payload safely
     product_catalog = [
@@ -92,8 +131,13 @@ async def generate_recommendations(query: str, max_results: int, available_produ
         for item in parsed_json:
             pid = item.get("product_id")
             if pid in candidates_map and pid not in seen_ids:
-                seen_ids.add(pid)
                 p = candidates_map[pid]
+                
+                if not is_locally_relevant(query, p):
+                    logger.info(f"[LOG_SEGURO] Producto {p.name} excluido por baja relevancia local.")
+                    continue
+                    
+                seen_ids.add(pid)
                 valid_recommendations.append(
                     Recommendation(
                         product_id=p.id,
@@ -107,11 +151,16 @@ async def generate_recommendations(query: str, max_results: int, available_produ
             if len(valid_recommendations) >= max_results:
                 break
                 
+        if not valid_recommendations:
+            logger.info("[LOG_SEGURO] Gemini devolvió 0 recomendaciones válidas o fueron excluidas por relevancia. Devolviendo [].")
+            return []
+
+        logger.info("[LOG_SEGURO] Se usó Gemini exitosamente para recomendaciones.")
         return valid_recommendations
 
     except Exception as e:
         logger.error(f"Gemini API error during search: {e}")
-        return _get_fallback_recommendations(candidates, max_results)
+        return _get_fallback_recommendations(candidates, max_results, query)
 
 async def generate_cart_recommendations(cart_items: List[Dict], max_results: int, available_products: List[Product]) -> List[Recommendation]:
     # 1. Take up to 20 products
@@ -186,6 +235,11 @@ async def generate_cart_recommendations(cart_items: List[Dict], max_results: int
             if len(valid_recommendations) >= max_results:
                 break
                 
+        if not valid_recommendations:
+            logger.info("[LOG_SEGURO] Gemini devolvió 0 recomendaciones de carrito válidas. Usando fallback.")
+            return _get_fallback_recommendations(candidates, max_results)
+
+        logger.info("[LOG_SEGURO] Se usó Gemini exitosamente para recomendaciones de carrito.")
         return valid_recommendations
 
     except Exception as e:
