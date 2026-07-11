@@ -1,205 +1,150 @@
-# 🛒 E-Commerce Microservices Platform
+<div align="center">
+  <h1>E-Commerce Platform</h1>
+  
+  <p>
+    Plataforma de comercio electrónico basada en una arquitectura de microservicios moderna y políglota para demostrar un sistema escalable y distribuido.
+  </p>
 
-**Universidad E.A.M — Facultad de Ingeniería — Electiva 3**
-Armenia, Quindío — Abril 2026
+  <p>
+    <img src="https://img.shields.io/badge/java-%23ED8B00.svg?style=for-the-badge&logo=openjdk&logoColor=white" alt="Java" />
+    <img src="https://img.shields.io/badge/spring-%236DB33F.svg?style=for-the-badge&logo=spring&logoColor=white" alt="Spring Boot" />
+    <img src="https://img.shields.io/badge/rust-%23000000.svg?style=for-the-badge&logo=rust&logoColor=white" alt="Rust" />
+    <img src="https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54" alt="Python" />
+    <img src="https://img.shields.io/badge/next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="Next.js" />
+    <img src="https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
+    <img src="https://img.shields.io/badge/postgresql-4169e1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL" />
+    <img src="https://img.shields.io/badge/MongoDB-%234ea94b.svg?style=for-the-badge&logo=mongodb&logoColor=white" alt="MongoDB" />
+  </p>
+</div>
 
----
+## Características
+
+* **Arquitectura distribuida:** 10 microservicios completamente independientes y desacoplados.
+* **API Gateway:** Enrutamiento centralizado y balanceo de carga básico.
+* **Persistencia Aislada:** Bases de datos independientes por servicio (PostgreSQL y MongoDB).
+* **IA Integration:** Sistema de recomendación de productos utilizando modelos fundacionales (Google GenAI).
+* **Procesamiento Asíncrono:** Comunicación guiada por eventos a través de RabbitMQ.
+* **Analítica Serverless:** Generación de reportes escalables usando AWS SAM.
+* **Interfaz de Usuario:** Frontend interactivo construido con Next.js y Tailwind CSS.
+
+## Capturas de pantalla
+
+> **Nota:** Aquí irán las capturas de pantalla de la interfaz de usuario.
+<!-- 
+  <p align="center">
+    <img src="docs/images/home.png" width="400" alt="Home" />
+    <img src="docs/images/cart.png" width="400" alt="Cart" />
+  </p>
+-->
+
+## Quick Start
+
+Ejecuta el entorno completo (backend + bases de datos + frontend) en menos de 2 minutos:
+
+```bash
+# 1. Configurar entorno
+cp .env.example .env
+
+# 2. Levantar la infraestructura completa (Docker requerido)
+docker-compose up --build -d
+
+# 3. Arrancar el frontend
+cd frontend
+npm install && npm run dev
+```
+
+> **Servicios activos:** Frontend (`localhost:3000`) • API Gateway (`localhost:8080`)
 
 ## Arquitectura
 
+El proyecto emplea una arquitectura orientada a servicios (SOA). A continuación se muestra la interacción de los componentes principales:
+
+```mermaid
+flowchart TD
+    Client([Cliente]) --> |REST| Gateway[API Gateway :8080]
+    
+    subgraph Microservicios Síncronos
+        Gateway --> Auth[Auth Service]
+        Gateway --> User[User Service]
+        Gateway --> Product[Product Service]
+        Gateway --> AI[AI Recommendation]
+    end
+
+    subgraph Procesamiento y Transacciones
+        Gateway --> Order[Order Service]
+        Gateway --> Cart[Cart Service]
+        Gateway --> Payment[Payment Service]
+    end
+    
+    subgraph Eventos y Analítica
+        Order -.-> |Eventos| RMQ((RabbitMQ))
+        Payment -.-> |Eventos| RMQ
+        Cart -.-> |Eventos| RMQ
+        RMQ -.-> Notification[Notification Service]
+        Reporting[Reporting Service] -.-> |Lectura| DB4
+    end
+
+    Auth --> DB1[(PostgreSQL)]
+    User --> DB2[(PostgreSQL)]
+    Product --> DB3[(PostgreSQL)]
+    Order --> DB4[(PostgreSQL)]
+    Cart --> DB5[(PostgreSQL)]
+    Payment --> DB6[(PostgreSQL)]
+    Notification --> DB7[(MongoDB)]
 ```
-                    ┌──────────────────────────────────────────────┐
-                    │              Docker Compose                   │
-                    │                                              │
-                    │  ┌────────────┐      ┌────────────┐         │
-                    │  │ Auth Svc   │      │ User Svc   │         │
-                    │  │ :8081      │      │ :8082      │         │
-                    │  │ Spring Boot│      │ Spring Boot│         │
-                    │  └─────┬──────┘      └─────┬──────┘         │
-                    │        │                   │                 │
-                    │  ┌─────┴──────┐      ┌─────┴──────┐         │
-                    │  │  auth_db   │      │  user_db   │         │
-                    │  │  PG :5433  │      │  PG :5434  │         │
-                    │  └────────────┘      └────────────┘         │
-                    │                                              │
-                    │  ┌────────────┐      ┌────────────┐         │
-                    │  │Product Svc │      │ Order Svc  │         │
-                    │  │ :8083      │      │ :8084      │         │
-                    │  │ Spring Boot│      │ Rust/Actix │         │
-                    │  └─────┬──────┘      └─────┬──────┘         │
-                    │        │                   │                 │
-                    │  ┌─────┴──────┐      ┌─────┴──────┐         │
-                    │  │ product_db │      │  order_db  │         │
-                    │  │  PG :5435  │      │  PG :5436  │         │
-                    │  └────────────┘      └────────────┘         │
-                    └──────────────────────────────────────────────┘
-```
+
+**Flujo de la arquitectura:**  
+Todas las peticiones del cliente ingresan a través del **API Gateway**, el cual funciona como fachada y redirige de forma síncrona hacia el dominio correspondiente. Para operaciones que requieren consistencia eventual o tareas pesadas (como confirmar un pago y notificar al usuario), los servicios emiten eventos a **RabbitMQ**, los cuales son procesados asincrónicamente por el **Notification Service**.
 
 ## Tecnologías
 
-| Componente | Tecnología | Versión |
-|---|---|---|
-| Auth Service | Java + Spring Boot | Java 21 LTS, Spring Boot 3.4.4 |
-| User Service | Java + Spring Boot | Java 21 LTS, Spring Boot 3.4.4 |
-| Product Service | Java + Spring Boot | Java 21 LTS, Spring Boot 3.4.4 |
-| Order Service | Rust + Actix-web | Stable Rust, Actix-web 4 |
-| Base de Datos | PostgreSQL | 16 Alpine |
-| JWT | JJWT / jsonwebtoken | 0.12.6 / 9.x |
-| Build Tool | Maven | 3.9 |
-| Contenedores | Docker + Compose | v3.9 |
+| Dominio | Tecnologías | Componentes Involucrados |
+| :--- | :--- | :--- |
+| **Frontend** | Next.js, React, Tailwind CSS | `frontend` |
+| **Enrutamiento** | Node.js, Express | `api-gateway` |
+| **Backend (Java)** | Spring Boot 3 | `auth-service`, `user-service`, `product-service` |
+| **Backend (Rust)** | Actix-web, Axum | `order-service`, `cart-service` |
+| **Backend (Python)** | FastAPI, Flask | `payment-service`, `notification-service` |
+| **Inteligencia Artificial** | FastAPI, Google GenAI | `ai-recommendation-service` |
+| **Serverless** | AWS SAM, AWS Lambda | `serverless-reporting-service` |
+| **Almacenamiento** | PostgreSQL, MongoDB | Todas las bases de datos aisladas |
+| **Mensajería** | RabbitMQ | Comunicación asíncrona de eventos |
 
----
+## Estructura del proyecto
 
-## Requisitos Previos
-
-- **Docker** y **Docker Compose** instalados
-- Puertos disponibles: 5433-5436 (PostgreSQL), 8081-8084 (servicios)
-
----
-
-## 🚀 Cómo Ejecutar
-
-### 1. Clonar y configurar
-
-```bash
-# Copiar variables de entorno
-cp .env.example .env
-```
-
-### 2. Levantar todo con Docker Compose
-
-```bash
-docker-compose up --build
-```
-
-> La primera ejecución tomará varios minutos descargando imágenes y compilando.
-
-### 3. Verificar que todo funciona
-
-```bash
-docker-compose ps
-```
-
-Todos los servicios deben estar en estado `Up`.
-
----
-
-## 📡 Endpoints API
-
-### Auth Service (`:8081`)
-
-| Método | Endpoint | Auth | Descripción |
-|---|---|---|---|
-| POST | `/auth/register` | ❌ | Registrar usuario |
-| POST | `/auth/login` | ❌ | Iniciar sesión |
-| POST | `/auth/refresh` | ❌ | Renovar token |
-| POST | `/auth/logout` | ✅ | Cerrar sesión |
-| GET | `/auth/me` | ✅ | Información del usuario |
-
-### User Service (`:8082`)
-
-| Método | Endpoint | Auth | Descripción |
-|---|---|---|---|
-| GET | `/users/me` | ✅ | Ver perfil |
-| PUT | `/users/me` | ✅ | Actualizar perfil |
-| GET | `/users/addresses` | ✅ | Listar direcciones |
-| POST | `/users/addresses` | ✅ | Agregar dirección |
-| PUT | `/users/addresses/{id}` | ✅ | Actualizar dirección |
-| DELETE | `/users/addresses/{id}` | ✅ | Eliminar dirección |
-
-### Product Service (`:8083`)
-
-| Método | Endpoint | Auth | Descripción |
-|---|---|---|---|
-| GET | `/products` | ❌ | Listar productos |
-| GET | `/products/{id}` | ❌ | Detalle de producto |
-| POST | `/products` | ✅ VENDOR/ADMIN | Crear producto |
-| PUT | `/products/{id}` | ✅ VENDOR/ADMIN | Actualizar producto |
-| DELETE | `/products/{id}` | ✅ VENDOR/ADMIN | Eliminar producto |
-| GET | `/categories` | ❌ | Listar categorías |
-| POST | `/categories` | ✅ ADMIN | Crear categoría |
-
-### Order Service (`:8084`)
-
-| Método | Endpoint | Auth | Descripción |
-|---|---|---|---|
-| POST | `/orders` | ✅ | Crear orden |
-| GET | `/orders/{id}` | ✅ | Ver orden |
-| GET | `/orders/my-orders` | ✅ | Historial de órdenes |
-| PATCH | `/orders/{id}/status` | ✅ ADMIN | Cambiar estado |
-
----
-
-## 🧪 Ejemplo de Uso
-
-```bash
-# 1. Registrar usuario
-curl -X POST http://localhost:8081/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"password123","role":"CLIENT"}'
-
-# 2. Guardar el accessToken de la respuesta, luego:
-
-# 3. Ver perfil (auto-crea el perfil)
-curl http://localhost:8082/users/me \
-  -H "Authorization: Bearer <TOKEN>"
-
-# 4. Ver catálogo (sin auth)
-curl http://localhost:8083/products
-
-# 5. Crear orden
-curl -X POST http://localhost:8084/orders \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <TOKEN>" \
-  -d '{"shipping_address":"Calle 1 #2-3, Armenia","items":[{"product_id":"uuid","quantity":2,"unit_price":29.99}]}'
-```
-
----
-
-## 📂 Estructura del Proyecto
-
-```
+```text
 E-COMERCE/
-├── docker-compose.yml
-├── .env / .env.example
-├── README.md
-├── auth-service/          (Spring Boot)
-├── user-service/          (Spring Boot)
-├── product-service/       (Spring Boot)
-└── order-service/         (Rust/Actix-web)
+├── ai-recommendation-service/   # Motor de recomendaciones
+├── api-gateway/                 # Enrutamiento central
+├── auth-service/                # Autenticación y JWT
+├── cart-service/                # Carrito de compras
+├── frontend/                    # Aplicación cliente web
+├── notification-service/        # Gestión de notificaciones
+├── order-service/               # Lógica de órdenes
+├── payment-service/             # Procesamiento de pagos
+├── product-service/             # Catálogo de productos
+├── serverless-reporting-service/# Reportes analíticos
+└── user-service/                # Gestión de usuarios
 ```
 
+## Roadmap
+
+- [x] Arquitectura base de microservicios.
+- [x] Configuración de API Gateway.
+- [x] Separación de bases de datos por dominio.
+- [x] Motor de IA para recomendaciones básicas.
+- [ ] Implementación completa de CI/CD (GitHub Actions).
+- [ ] Monitoreo y trazabilidad (Prometheus, Grafana, OpenTelemetry).
+- [ ] Cobertura total de pruebas unitarias y de integración.
+- [ ] Refinamiento de la UI/UX del cliente web.
+
+## Documentación y Contribución
+
+Para obtener detalles de las APIs y patrones utilizados, revisa el directorio `docs/` o los archivos `README.md` de cada servicio. 
+
+Si deseas contribuir, realiza un *fork* del repositorio, crea una nueva rama descriptiva y envía tu *Pull Request*. Las incidencias o propuestas de mejora pueden registrarse en los *Issues*.
+
 ---
-
-## 🔒 Seguridad
-
-- **JWT** con firma HS256 y secreto compartido entre servicios
-- **BCrypt** para hash de contraseñas
-- **Refresh Tokens** para renovación sin re-autenticación
-- **Roles**: ADMIN, CLIENT, VENDOR
-- Cada servicio valida JWT localmente
-
----
-
-## 🔄 Escalabilidad
-
-### ¿Por qué estos 4 microservicios son suficientes para un MVP?
-
-1. **Auth Service**: Cubre autenticación completa (registro, login, JWT, refresh tokens)
-2. **User Service**: Gestión de perfiles y direcciones del usuario
-3. **Product Service**: Catálogo completo con categorías y control por vendedor
-4. **Order Service**: Ciclo de vida completo de órdenes
-
-Con estos 4 servicios se pueden demostrar los **flujos principales** de un e-commerce: registrarse → explorar productos → realizar pedidos.
-
-### ¿Cómo escalar a la arquitectura completa?
-
-| Servicio Futuro | Propósito | Integración |
-|---|---|---|
-| Payment Service (Python/FastAPI) | Procesamiento de pagos | Consume orden creada, actualiza estado |
-| Cart Service (Rust/Axum) | Carrito de compras | Se integra antes de crear la orden |
-| Notification Service (Python/Flask) | Notificaciones | Escucha eventos vía RabbitMQ |
-| API Gateway (Node.js/Express) | Punto de entrada único | Proxy reverso hacia todos los servicios |
-| Serverless Reporting (Python/Lambda) | Reportes | Consulta datos de órdenes y productos |
-
-La clave es agregar **RabbitMQ** como broker de mensajería para la comunicación asíncrona entre servicios.
+<div align="center">
+  <sub>Este proyecto ha sido desarrollado con fines académicos y de demostración técnica para la Universidad E.A.M. (Armenia, Quindío).</sub>
+</div>
